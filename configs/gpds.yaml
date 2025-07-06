@@ -1,0 +1,138 @@
+# GPDS dataset configuration
+# Inherits from base.yaml and overrides dataset-specific settings
+
+defaults:
+  - base
+
+# Dataset specific settings
+dataset:
+  name: "GPDS"
+  DATA_ROOT: !!str "TODO/SET/ABSOLUTE/PATH"  # TODO: Set the path to GPDS dataset
+  
+  # GPDS dataset versions
+  version: "GPDS-960"  # GPDS-960, GPDS-300, or GPDS-Synthetic
+  
+  # Dataset statistics (for GPDS-960)
+  num_users: 960
+  genuine_per_user: 24
+  skilled_forgeries_per_user: 30
+  
+  # Directory structure
+  genuine_dir_pattern: "{user_id:03d}/c-{user_id:03d}-{sig_id:02d}.jpg"
+  forgery_dir_pattern: "{user_id:03d}/cf-{user_id:03d}-{sig_id:02d}.jpg"
+  
+  # Large dataset handling
+  use_subset: false  # Set to true for debugging
+  subset_users: 100  # Number of users to use if use_subset is true
+  
+  # Cross-validation settings
+  use_cross_validation: false  # Use fixed split for large dataset
+  
+  # User splits (for GPDS-960)
+  train_users: [1, 760]  # Users 1-760 for training
+  val_users: [761, 860]  # Users 761-860 for validation
+  test_users: [861, 960]  # Users 861-960 for testing
+  
+# Override training settings for GPDS
+training:
+  batch_size: 64  # Larger batch size for bigger dataset
+  num_epochs: 80  # Fewer epochs due to more data
+  
+  optimizer:
+    lr: 2e-4
+    weight_decay: 0.01  # Less regularization for larger dataset
+    
+  scheduler:
+    warmup_epochs: 3
+    
+  # Gradient accumulation for effective larger batch
+  gradient_accumulation_steps: 2
+  
+# Data preprocessing for GPDS
+data:
+  # GPDS images are typically larger and in color
+  image_size: 256
+  resize_mode: "pad"  # pad or crop
+  maintain_aspect_ratio: true
+  
+  # Multi-scale training
+  multi_scale_training: true
+  scales: [224, 256, 288]
+  
+  augmentation:
+    train:
+      - type: "RandomResizedCrop"
+        size: 256
+        scale: [0.7, 1.0]  # More aggressive for larger dataset
+      - type: "RandomHorizontalFlip"
+        p: 0.5
+      - type: "RandomRotation"
+        degrees: 15
+      - type: "RandomPerspective"
+        distortion_scale: 0.2
+        p: 0.5
+      - type: "ElasticTransform"
+        alpha: 150
+        sigma: 15
+        p: 0.5
+      - type: "ColorJitter"
+        brightness: 0.3
+        contrast: 0.3
+        saturation: 0.3
+        hue: 0.1
+      - type: "RandomGrayscale"
+        p: 0.2
+      - type: "CoarseDropout"
+        max_holes: 8
+        max_height: 32
+        max_width: 32
+        p: 0.3
+        
+# Model adjustments for GPDS
+model:
+  # Use larger model capacity for bigger dataset
+  cnn_backbone:
+    base_channels: 96  # Increased from 64
+    
+  multi_scale_attention:
+    channels: 384  # Increased from 256
+    
+  fusion_head:
+    hidden_dim: 768  # Increased from 512
+    
+# Loss settings for GPDS
+loss:
+  ce_weight: 0.9
+  triplet_weight: 0.2  # Higher triplet weight for more data
+  use_focal_loss: true  # Help with imbalanced genuine/forged ratio
+  focal_gamma: 2.0
+  focal_alpha: 0.25
+  
+# Evaluation protocol for GPDS
+evaluation:
+  protocol: "skilled_forgery"
+  batch_size: 128  # Larger batch for faster evaluation
+  # GPDS-specific evaluation
+  compute_random_forgery_metrics: true
+  compute_cross_dataset_metrics: false
+  
+# Distributed training settings (for GPDS)
+distributed:
+  enabled: false  # Set to true for multi-GPU training
+  backend: "nccl"
+  world_size: 4
+  
+# Paths specific to GPDS
+paths:
+  output_dir: "./runs/gpds"
+  checkpoint_dir: "./checkpoints/gpds"
+  
+# Notes for users
+notes: |
+  GPDS Dataset Information:
+  - Download from: http://www.gpds.ulpgc.es/
+  - GPDS-960: 960 users, 24 genuine + 30 skilled forgeries each
+  - GPDS-300: Subset with 300 users
+  - GPDS-Synthetic: Contains synthetic forgeries
+  - Images are color JPEGs with varying sizes
+  - Set DATA_ROOT to the directory containing user folders (001/, 002/, etc.) 

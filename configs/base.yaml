@@ -1,0 +1,155 @@
+# Base configuration for MSA-T OSV
+# This file contains all default hyperparameters and settings
+
+# Model architecture
+model:
+  # CNN Backbone settings
+  cnn_backbone:
+    type: "lightweight_cnn"
+    num_layers: 11
+    base_channels: 64
+    use_spp: true
+    spp_levels: [1, 2, 4]
+    
+  # Multi-scale attention settings
+  multi_scale_attention:
+    scales: [1.0, 0.5, 0.25]  # 1x, 1/2x, 1/4x
+    channels: 256
+    use_spatial_attention: true
+    use_channel_attention: true
+    reduction_ratio: 16
+    
+  # ViT encoder settings
+  vit_encoder:
+    type: "vit_small"
+    patch_size: 8
+    embed_dim: 384
+    depth: 12
+    num_heads: 6
+    mlp_ratio: 4.0
+    drop_rate: 0.1
+    attn_drop_rate: 0.1
+    pretrained: true
+    pretrained_path: "imagenet22k"  # or path to checkpoint
+    
+  # Fusion head settings
+  fusion_head:
+    hidden_dim: 512
+    dropout: 0.2
+    use_layer_norm: true
+    
+  # Classifier settings
+  classifier:
+    num_classes: 2  # genuine vs forged
+    temperature: 1.0
+
+# Loss settings
+loss:
+  ce_weight: 1.0
+  triplet_weight: 0.1
+  triplet_margin: 0.2
+  label_smoothing: 0.1
+
+# Training settings
+training:
+  batch_size: 32
+  num_epochs: 100
+  num_workers: 4
+  pin_memory: true
+  
+  # Optimizer settings
+  optimizer:
+    type: "adamw"
+    lr: 1e-4
+    weight_decay: 0.05
+    betas: [0.9, 0.999]
+    eps: 1e-8
+    
+  # Learning rate scheduler
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 5
+    min_lr: 1e-6
+    
+  # Mixed precision training
+  use_amp: true
+  grad_clip: 1.0
+  
+  # EMA settings
+  use_ema: true
+  ema_decay: 0.9999
+  
+  # Checkpoint settings
+  save_freq: 5  # Save every N epochs
+  save_best: true  # Save best model based on validation EER
+  
+# Data settings
+data:
+  # Image preprocessing
+  image_size: 256
+  channels: 3
+  normalize_mean: [0.485, 0.456, 0.406]
+  normalize_std: [0.229, 0.224, 0.225]
+  
+  # Data augmentation
+  augmentation:
+    train:
+      - type: "RandomResizedCrop"
+        size: 256
+        scale: [0.8, 1.0]
+      - type: "RandomHorizontalFlip"
+        p: 0.5
+      - type: "RandomRotation"
+        degrees: 10
+      - type: "ColorJitter"
+        brightness: 0.2
+        contrast: 0.2
+        saturation: 0.2
+        hue: 0.1
+      - type: "RandomAffine"
+        degrees: 5
+        translate: [0.1, 0.1]
+        scale: [0.9, 1.1]
+      - type: "GaussianBlur"
+        p: 0.3
+        kernel_size: 5
+    val:
+      - type: "Resize"
+        size: 256
+      - type: "CenterCrop"
+        size: 256
+        
+  # Dataset splits
+  train_split: 0.6
+  val_split: 0.2
+  test_split: 0.2
+  
+# Evaluation settings
+evaluation:
+  batch_size: 64
+  num_workers: 4
+  compute_roc: true
+  compute_tsne: false
+  save_predictions: true
+
+# Logging settings
+logging:
+  log_freq: 10  # Log every N steps
+  use_tensorboard: true
+  use_wandb: false
+  wandb_project: "msa-t-osv"
+  wandb_entity: null
+
+# Random seed for reproducibility
+seed: 42
+
+# Device settings
+device: "cuda"  # cuda or cpu
+cuda_deterministic: true
+
+# Paths
+paths:
+  output_dir: "./runs"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+  vis_dir: "./visualizations" 

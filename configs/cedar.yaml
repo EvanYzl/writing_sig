@@ -1,0 +1,76 @@
+# CEDAR dataset configuration
+# Inherits from base.yaml and overrides dataset-specific settings
+
+defaults:
+  - base
+
+# Dataset specific settings
+dataset:
+  name: "CEDAR"
+  DATA_ROOT: !!str "TODO/SET/ABSOLUTE/PATH"  # TODO: Set the path to CEDAR dataset
+  
+  # CEDAR dataset structure
+  genuine_dir: "genuine"
+  forged_dir: "forged"
+  
+  # Number of writers and signatures per writer
+  num_writers: 55
+  signatures_per_writer: 24
+  forgeries_per_writer: 24
+  
+  # Cross-validation settings
+  use_cross_validation: true
+  num_folds: 5
+  
+  # Writer-independent split
+  writer_independent: true
+  test_writers: [50, 51, 52, 53, 54]  # Last 5 writers for testing
+  
+# Override some training settings for CEDAR
+training:
+  batch_size: 24  # Smaller batch size due to dataset size
+  num_epochs: 150  # More epochs for smaller dataset
+  
+  optimizer:
+    lr: 5e-5  # Lower learning rate for fine-tuning
+    
+# Data augmentation specific to signatures
+data:
+  augmentation:
+    train:
+      - type: "RandomResizedCrop"
+        size: 256
+        scale: [0.9, 1.0]  # Less aggressive cropping for signatures
+      - type: "RandomRotation"
+        degrees: 5  # Smaller rotation for signatures
+      - type: "ElasticTransform"
+        alpha: 50
+        sigma: 5
+        p: 0.3
+      - type: "GridDistortion"
+        p: 0.2
+      - type: "OpticalDistortion"
+        p: 0.2
+      - type: "RandomBrightnessContrast"
+        brightness_limit: 0.1
+        contrast_limit: 0.1
+        p: 0.5
+        
+# Evaluation protocol for CEDAR
+evaluation:
+  protocol: "skilled_forgery"  # Test on skilled forgeries
+  compute_writer_dependent_metrics: true
+  compute_writer_independent_metrics: true
+  
+# Paths specific to CEDAR
+paths:
+  output_dir: "./runs/cedar"
+  checkpoint_dir: "./checkpoints/cedar"
+  
+# Notes for users
+notes: |
+  CEDAR Dataset Information:
+  - Download from: http://www.cedar.buffalo.edu/NIJ/data/
+  - Contains 55 writers with 24 genuine and 24 forged signatures each
+  - Images are grayscale, typically 640x480 pixels
+  - Set DATA_ROOT to the path containing 'genuine' and 'forged' subdirectories 

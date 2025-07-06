@@ -1,0 +1,97 @@
+# MCYT dataset configuration
+# Inherits from base.yaml and overrides dataset-specific settings
+
+defaults:
+  - base
+
+# Dataset specific settings
+dataset:
+  name: "MCYT"
+  DATA_ROOT: !!str "TODO/SET/ABSOLUTE/PATH"  # TODO: Set the path to MCYT dataset
+  
+  # MCYT dataset structure
+  signature_type: "offline"  # offline or online
+  
+  # Dataset statistics
+  num_users: 75
+  genuine_per_user: 15
+  skilled_forgeries_per_user: 15
+  
+  # File naming pattern
+  file_pattern: "{user_id:04d}v{signature_id:02d}.png"  # genuine
+  forgery_pattern: "{user_id:04d}f{forger_id:02d}{signature_id:02d}.png"  # forgery
+  
+  # Cross-validation settings
+  use_cross_validation: true
+  num_folds: 5
+  
+  # User-independent split
+  user_independent: true
+  test_users: [70, 71, 72, 73, 74]  # Last 5 users for testing
+  
+# Override training settings for MCYT
+training:
+  batch_size: 32
+  num_epochs: 120
+  
+  optimizer:
+    lr: 1e-4
+    
+  scheduler:
+    warmup_epochs: 10  # Longer warmup for larger dataset
+    
+# Data preprocessing for MCYT
+data:
+  # MCYT images may need different preprocessing
+  image_size: 256
+  pad_white: true  # Pad with white background
+  center_signature: true  # Center the signature in the image
+  
+  augmentation:
+    train:
+      - type: "RandomResizedCrop"
+        size: 256
+        scale: [0.85, 1.0]
+      - type: "RandomRotation"
+        degrees: 8
+      - type: "ElasticTransform"
+        alpha: 100
+        sigma: 10
+        p: 0.4
+      - type: "MorphologicalTransform"  # Simulate pen pressure variations
+        operations: ["erosion", "dilation"]
+        kernel_size: 3
+        p: 0.3
+      - type: "RandomBrightnessContrast"
+        brightness_limit: 0.15
+        contrast_limit: 0.15
+        p: 0.5
+      - type: "GaussNoise"
+        var_limit: (10.0, 50.0)
+        p: 0.2
+        
+# Evaluation protocol for MCYT
+evaluation:
+  protocol: "skilled_forgery"
+  compute_user_dependent_metrics: true
+  compute_user_independent_metrics: true
+  # MCYT-specific metrics
+  compute_random_forgery_metrics: false  # MCYT focuses on skilled forgeries
+  
+# Loss settings adjusted for MCYT
+loss:
+  triplet_weight: 0.15  # Higher weight for triplet loss due to more data
+  
+# Paths specific to MCYT
+paths:
+  output_dir: "./runs/mcyt"
+  checkpoint_dir: "./checkpoints/mcyt"
+  
+# Notes for users
+notes: |
+  MCYT-75 Dataset Information:
+  - Download from: http://atvs.ii.uam.es/databases.html
+  - Contains 75 users with 15 genuine and 15 skilled forgeries each
+  - Total: 2,250 signature images
+  - Images are binary/grayscale scanned signatures
+  - Set DATA_ROOT to the directory containing all signature images 
